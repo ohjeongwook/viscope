@@ -16,3 +16,6 @@ Set output file
 	!vs.outfile CreateFileW-%d.dot
 Start tracing on kernel32!CreateFileW
 	!vs.trace kernel32!CreateFileW
+Output will be like following:
+
+<img src=CreateFileW-0.png>
