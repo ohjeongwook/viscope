@@ -1,21 +1,21 @@
 ==Commands==
-help: show help
-dt: Show data structure in graph format
-kb: show stack frames using heuristics, show exception records
-u: disassemble and show in graph format
-trace: trace by basic blocks and shows code path
-outfile: set output file
-debuglevel: set debug level
+*help: show help
+*dt: Show data structure in graph format
+*kb: show stack frames using heuristics, show exception records
+*u: disassemble and show in graph format
+*trace: trace by basic blocks and shows code path
+*outfile: set output file
+*debuglevel: set debug level
 
 ==Example==
-Launch windbg
+*Launch windbg
 	"C:\Program Files\Debugging Tools for Windows (x86)\windbg"
-Run sample program
+*Run sample program
 	c:\windows\system32\notepad.exe
-Set output file
+*Set output file
 	!vs.outfile CreateFileW-%d.dot
-Start tracing on kernel32!CreateFileW
+*Start tracing on kernel32!CreateFileW
 	!vs.trace kernel32!CreateFileW
-Output will be like following:
+*Output will be like following:
 
 [http://viscope.googlecode.com/svn/wiki/CreateFileW-0-Small.png]
