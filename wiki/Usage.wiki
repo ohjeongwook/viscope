@@ -18,4 +18,4 @@ Start tracing on kernel32!CreateFileW
 	!vs.trace kernel32!CreateFileW
 Output will be like following:
 
-[http://code.google.com/p/viscope/source/browse/wiki/CreateFileW-0.png]
+[http://viscope.googlecode.com/svn/wiki/CreateFileW-0.png]
