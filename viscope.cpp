@@ -1,18 +1,3 @@
-/*++
-
-Copyright(c)2000  Microsoft Corporation
-
-Module Name:
-
-	dbgexts.cpp
-
-Abstract:
-
-	This file contains the generic routines and initialization code
-	for the debugger extensions dll.
-
---*/
-
 #include "viscope.h"
 #include <strsafe.h>
 
