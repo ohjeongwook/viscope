@@ -4,8 +4,11 @@ TARGETPATH=.
 
 DLLENTRY=_DllMainCRTStartup
 
+GETOPT_DIR=T:\mat\Projects\ResearchTools\Console\xGetOpt
+STRING_TO_ARGUMENT_LIST_DIR=T:\mat\Projects\ResearchTools\String\StringToArgumentList
+
 !if "$(DBGSDK_INC_PATH)" != ""
-INCLUDES = $(DBGSDK_INC_PATH);$(INCLUDES)
+INCLUDES = $(DBGSDK_INC_PATH);$(GETOPT_DIR);$(STRING_TO_ARGUMENT_LIST_DIR);$(INCLUDES)
 !endif
 !if "$(DBGSDK_LIB_PATH)" == ""
 DBGSDK_LIB_PATH = $(SDK_LIB_PATH)
@@ -20,4 +23,4 @@ USE_STL=1
 USE_NATIVE_EH=1
 UMTYPE=windows
 MSC_WARNING_LEVEL = /W4 /WX
-SOURCES=viscope.cpp commands.cpp viscope.rc
+SOURCES=viscope.cpp commands.cpp viscope.rc StringToArgumentList.cpp XGetopt.cpp
