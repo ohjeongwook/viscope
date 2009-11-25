@@ -19,7 +19,9 @@ int DebugLevel=0;
 using namespace std;
 using namespace stdext;
 
-char *CurrentOutputFilename=NULL;
+
+#include "XGetopt.h"
+#include "StringToArgumentList.h"
 
 void DumpHex(unsigned char *Buffer,int BufferLen)
 {
@@ -373,7 +375,8 @@ void RetrieveBasicBlockInfoHashMap(ULONG64 Address,hash_map <ULONG64,PBASIC_BLOC
 						//0100297b/e8e51b0000/call/notepad!NPInit (01004565)
 						//01002a19/ffd7/call/edi
 						//01002a44/ff55fc/call/dword ptr [ebp-4]   
-						dprintf("%s/%s/%s/%s\n",Address,Bytes,OpCode,Operands);
+						if(DebugLevel>2)
+							dprintf("%s %s %s %s\n",Address,Bytes,OpCode,Operands);
 					}
 				}
 				if(Parts)
@@ -1219,20 +1222,62 @@ HRESULT CALLBACK kb(PDEBUG_CLIENT4 Client,PCSTR args)
 HRESULT CALLBACK u(PDEBUG_CLIENT4 Client,PCSTR args)
 {
 	INIT_API();
-	ULONG64 Address=GetExpression(args);
+
+	//!vs.u -o <filename> -l 30 <address>
+	//-o <filename>: Output filename
+	//-l : Maximum level for analysis
+
+	int argc;
+	char **argv=StringToArgumentList(args,&argc);
+	char *optstring="o:l:";
+	int optind=0;
+	char *optarg;
+	int c;
+
+	if(DebugLevel>2)
+	{
+		dprintf("%s: args=[%s]\n",__FUNCTION__,args);
+		for(int i=0;i<argc;i++)
+		{
+			dprintf("%s: argv[%d]=[%s]\n",__FUNCTION__,i,argv[i]);
+		}
+	}
+	char *OutputFilename=NULL;
+	int Level=-1;
+	while((c=getopt(argc,argv,optstring,&optind,&optarg,FALSE))!=EOF)
+	{
+		switch(c)
+		{
+			case 'o':
+				OutputFilename=optarg;
+				break;
+			case 'l':
+				Level=atoi(optarg);
+				break;
+		}
+	}
+	char *AddressStr=NULL;
+	if(optind<argc)
+		AddressStr=argv[optind];
+
+	if(DebugLevel>2)
+		dprintf("%s: AddressStr=[%s]\n",__FUNCTION__,AddressStr);
+	ULONG64 Address=GetExpression(AddressStr);
 
 	hash_map <ULONG64,PBASIC_BLOCK_INFO> BasicBlockInfoHashMap;
 	RetrieveBasicBlockInfoHashMap(Address,BasicBlockInfoHashMap,TRUE);
 
-	if(CurrentOutputFilename)
+	if(OutputFilename)
 	{
-		OutputDOT(BasicBlockInfoHashMap,NULL,CurrentOutputFilename);
-		ConvertUsingDOT(CurrentOutputFilename);
+		OutputDOT(BasicBlockInfoHashMap,NULL,OutputFilename);
+		ConvertUsingDOT(OutputFilename);
 	}
+
+	FreeArgumentList((const char **)argv,argc);
+
 	EXIT_API();
 	return S_OK;
 }
-
 
 hash_map <ULONG64,PBASIC_BLOCK_INFO> BasicBlockInfoHashMap;
 
@@ -1253,7 +1298,42 @@ hash_map <ULONG64,BP_INFO> BreakPointInformationMap;
 
 class EventCallbacks:public DebugBaseEventCallbacks
 {
+private:
+	char *OutputFilename;
+	bool AutomaticContinue;
+	int MaximumNumberOfBasicBlocksToTrace;
 public:
+	EventCallbacks():OutputFilename(NULL),AutomaticContinue(FALSE),MaximumNumberOfBasicBlocksToTrace(-1)
+	{
+	}
+
+	~EventCallbacks()
+	{
+		FreeOutputFilename();
+	}
+
+	void FreeOutputFilename()
+	{
+		if(OutputFilename)
+			free(OutputFilename);
+	}
+
+	void SetOutputFilename(const char *ParamOutputFilename)
+	{
+		FreeOutputFilename();
+		OutputFilename=_strdup((char *)ParamOutputFilename);
+	}
+
+	void SetAutomaticContinueFlag(bool ParamAutomaticContinue)
+	{
+		AutomaticContinue=ParamAutomaticContinue;
+	}
+
+	void SetMaximumNumberOfBasicBlocksToTrace(int ParamMaximumNumberOfBasicBlocksToTrace)
+	{
+		MaximumNumberOfBasicBlocksToTrace=ParamMaximumNumberOfBasicBlocksToTrace;
+	}
+
 	STDMETHODIMP_(ULONG)AddRef(THIS)
 	{
 		// This class is designed to be static so
@@ -1450,10 +1530,10 @@ public:
 					{
 						dprintf("%p\r\n",*BreakPointLogIterator);
 					}
-					if(CurrentOutputFilename)
+					if(OutputFilename)
 					{
 						char Filename[1024]={0,};
-						_snprintf(Filename,sizeof(Filename)-1,CurrentOutputFilename,BreakPointLogSeq);
+						_snprintf(Filename,sizeof(Filename)-1,OutputFilename,BreakPointLogSeq);
 						BreakPointLogSeq++;
 						OutputDOT(BasicBlockInfoHashMap,pBreakPointLog,Filename);
 						ConvertUsingDOT(Filename);
@@ -1467,7 +1547,15 @@ public:
 						return DEBUG_STATUS_GO;
 					}
 					else
-						return DEBUG_STATUS_BREAK;
+					{
+						if(AutomaticContinue)
+						{
+							return DEBUG_STATUS_GO;
+						}else
+						{
+							return DEBUG_STATUS_BREAK;
+						}
+					}
 				}
 			}
 
@@ -1509,7 +1597,6 @@ public:
 
 		return S_OK;
 	}
-
 };
 
 static EventCallbacks g_EventCb;
@@ -1518,7 +1605,63 @@ static BOOL EventCallbackRegistered=FALSE;
 HRESULT CALLBACK trace(PDEBUG_CLIENT4 Client,PCSTR args)
 {
 	INIT_API();
-	ULONG64 Address=GetExpression(args);
+
+	//!vs.u -o <filename> -l 30 <address>
+	//-o <filename>: Output filename
+	//-b <number>: Maximum number of basic block to trace
+	//-c: Automatic continue
+
+	int argc;
+	char **argv=StringToArgumentList(args,&argc);
+	char *optstring="o:b:c";
+	int optind=0;
+	TCHAR *optarg;
+	int c;
+
+
+	if(DebugLevel>2)
+	{
+		dprintf("%s: args=[%s]\n",__FUNCTION__,args);
+		for(int i=0;i<argc;i++)
+		{
+			dprintf("%s: argv[%d]=[%s]\n",__FUNCTION__,i,argv[i]);
+		}
+	}
+
+	char *OutputFilename=NULL;
+	int MaximumNumberOfBasicBlocksToTrace=-1;
+	bool AutomaticContinue=false;
+	while((c=getopt(argc,argv,optstring,&optind,&optarg,FALSE))!=EOF)
+	{
+		if(DebugLevel>-2)
+		{
+			dprintf("%s: argv[%d]=%s\n",__FUNCTION__,optind,argv[optind]);
+		}
+		switch(c)
+		{
+			case 'o':
+				OutputFilename=optarg;
+				break;
+			case 'b':
+				MaximumNumberOfBasicBlocksToTrace=atoi(optarg);
+				break;
+			case 'c':
+				AutomaticContinue=true;
+				break;
+		}
+	}
+	char *AddressStr=NULL;
+	if(optind<argc)
+		AddressStr=argv[optind];
+
+	ULONG64 Address;
+	if(AddressStr)
+	{
+		Address=GetExpression(AddressStr);
+	}else
+	{
+		g_ExtRegisters->GetInstructionOffset(&Address);
+	}
 	dprintf("%s: %X\n",__FUNCTION__,Address);
 
 	BreakPointLogMap.clear();
@@ -1579,6 +1722,10 @@ HRESULT CALLBACK trace(PDEBUG_CLIENT4 Client,PCSTR args)
 		IDebugClient *NewClient;
 		if(g_ExtClient->CreateClient(&NewClient)==S_OK && NewClient)
 		{
+			g_EventCb.SetMaximumNumberOfBasicBlocksToTrace(MaximumNumberOfBasicBlocksToTrace);
+			g_EventCb.SetAutomaticContinueFlag(AutomaticContinue);
+			if(OutputFilename)
+				g_EventCb.SetOutputFilename(OutputFilename);
 			if(NewClient->SetEventCallbacks(&g_EventCb)== S_OK)
 			{
 				EventCallbackRegistered=TRUE;
@@ -1590,17 +1737,8 @@ HRESULT CALLBACK trace(PDEBUG_CLIENT4 Client,PCSTR args)
 					DEBUG_OUTCTL_NOT_LOGGED,
 					"g",// Command to be executed
 					DEBUG_EXECUTE_DEFAULT);*/
+	FreeArgumentList((const char **)argv,argc);
 	EXIT_API();
-	return S_OK;
-}
-
-//Helper functions
-
-HRESULT CALLBACK outfile(PDEBUG_CLIENT4 Client,PCSTR args)
-{
-	if(CurrentOutputFilename)
-		free(CurrentOutputFilename);
-	CurrentOutputFilename=_strdup(args);
 	return S_OK;
 }
 
