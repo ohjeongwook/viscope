@@ -31,7 +31,9 @@ ex) C:\Program Files\Debugging Tools for Windows (x86)\winext
 	c:\windows\system32\notepad.exe
 
 *Start tracing on kernel32!CreateFileW
+<pre>
 	!vs.trace -o CreateFile%d.dot kernel32!CreateFileW
+</pre>
 
 *Output will be like following:
 [http://viscope.googlecode.com/svn/wiki/CreateFileW-0-Small.png]
