@@ -14,6 +14,11 @@ ex) C:\Program Files\Debugging Tools for Windows (x86)\winext
 
 *trace: trace by basic blocks and shows code path
 
+!vs.trace -o <filename> -b 30 <address>          
+ -o <filename>: Output filename          
+ -b <number>: Maximum number of basic block to trace          
+ -c: Automatic continue  
+
 *outfile: set output file
 
 *debuglevel: set debug level
@@ -25,12 +30,8 @@ ex) C:\Program Files\Debugging Tools for Windows (x86)\winext
 *Run sample program
 	c:\windows\system32\notepad.exe
 
-*Set output file
-	!vs.outfile CreateFileW-%d.dot
-
 *Start tracing on kernel32!CreateFileW
-	!vs.trace kernel32!CreateFileW
+	!vs.trace -o CreateFile%d.dot kernel32!CreateFileW
 
 *Output will be like following:
-
 [http://viscope.googlecode.com/svn/wiki/CreateFileW-0-Small.png]
