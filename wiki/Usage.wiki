@@ -13,13 +13,12 @@ ex) C:\Program Files\Debugging Tools for Windows (x86)\winext
 *u: disassemble and show in graph format
 
 *trace: trace by basic blocks and shows code path
-
+'
 !vs.trace -o <filename> -b 30 <address>          
  -o <filename>: Output filename          
  -b <number>: Maximum number of basic block to trace          
  -c: Automatic continue  
-
-*outfile: set output file
+'
 
 *debuglevel: set debug level
 
